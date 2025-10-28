@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulação de Cuba Eletrolítica com Linhas Equipotenciais</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --accent: #4f46e5;
+      --skin: #ffd3b6;
+      --card-bg: white;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      background: var(--bg);
+      color: var(--text-primary);
+    }
+    
+    .container {
+      display: flex;
+      height: 100vh;
+      padding: 20px;
+      gap: 20px;
+    }
+    
+    .simulation-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(11, 12, 18, 0.06);
+      overflow: hidden;
+    }
+    
+    .controls {
+      padding: 20px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+    }
+    
+    .value-display {
+      display: inline-block;
+      width: 40px;
+      text-align: right;
+    }
+    
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    button.secondary {
+      background: #f3f4f6;
+      color: #111;
+    }
+    
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    
+    #canvas-container {
+      flex: 1;
+      background: #1a1a2e;
+      position: relative;
+    }
+    
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    
+    .avatar-overlay {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+    }
+    
+    .avatar-card {
+      width: 360px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(11, 12, 18, 0.15);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    
+    .avatar-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .avatar-header {
+      padding: 12px 16px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .avatar-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+    
+    .avatar-stage {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9fafb;
+    }
+    
+    .avatar-controls {
+      padding: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #e6e9ef;
+      resize: vertical;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    
+    .small {
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+    
+    .hint {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .info-panel {
+      width: 400px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(11, 12, 18, 0.06);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .info-tabs {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-tabp {
+      width: 200px;
+      height: 50px;
+      margin-right: 10px;
+    }
+    
+    .info-tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      background: rgb(150, 167, 254);
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    
+    .info-tab.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .info-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    h2 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    
+    /* Estilos para o fluxograma simplificado */
+    .simple-flowchart {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    
+    .flow-block {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 8px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .flow-block.main {
+      background: #f6ffed;
+      border-color: #b7eb8f;
+    }
+    
+    .flow-block.loop {
+      background: #fff7e6;
+      border-color: #ffd591;
+      margin-left: 20px;
+      position: relative;
+    }
+    
+    .flow-block.loop::before {
+      content: "↳";
+      position: absolute;
+      left: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #ffa940;
+    }
+    
+    .flow-block.section {
+      background: #f9f0ff;
+      border-color: #d3adf7;
+      text-align: center;
+      font-weight: bold;
+      margin: 12px 0 8px 0;
+    }
+    
+    .flow-arrow {
+      text-align: center;
+      margin: 2px 0;
+      color: #8c8c8c;
+    }
+    
+    .flow-arrow.loop {
+      margin-left: 20px;
+    }
+    
+    .flow-arrow.return {
+      text-align: center;
+      font-style: italic;
+      margin: 8px 0;
+      color: #8c8c8c;
+    }
+    
+    .loop-container {
+      margin-left: 10px;
+      border-left: 2px dashed #ffa940;
+      padding-left: 10px;
+    }
+    
+    /* Boca animada (abre e fecha) */
+    .mouth ellipse {
+      transform-origin: 160px 142px;
+    }
+    
+    .mouth.talking ellipse {
+      animation: mouthTalk 250ms ease-in-out infinite;
+    }
+    
+    @keyframes mouthTalk {
+      0% { transform: scaleY(1); }
+      50% { transform: scaleY(0.3); }
+      100% { transform: scaleY(1); }
+    }
+    
+    /* Braço direito acenando */
+    .arm {
+      transform-origin: 92px 150px;
+    }
+    
+    .arm.waving {
+      animation: wave 1s ease-in-out infinite;
+    }
+    
+    @keyframes wave {
+      0% { transform: rotate(0deg); }
+      25% { transform: rotate(30deg); }
+      50% { transform: rotate(-15deg); }
+      75% { transform: rotate(25deg); }
+      100% { transform: rotate(0deg); }
+    }
+    
+    @media (max-width: 1200px) {
+      .container {
+        flex-direction: column;
+        height: auto;
+      }
+      
+      .info-panel {
+        width: 100%;
+        height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="simulation-panel">
+
+      <div class="info-tabs">
+        <button class="info-tabp" onclick="window.location.href='page-cargas.html'" data-tab="flowchart">Cargas Elétricas</button>
+        <button class="info-tabp" onclick="window.location.href='page-cuba.html'" data-tab="explanation">Cuba Eletrolítica</button>
+        <button class="info-tabp" onclick="window.location.href='page-magnetico.html'" data-tab="physics">Campo Magnético</button>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="voltage1">Tensão Esquerda (V): <span id="voltage1-value" class="value-display">+20</span></label>
+          <input type="range" id="voltage1" min="-50" max="50" step="1" value="20">
+        </div>
+        
+        <div class="control-group">
+          <label for="voltage2">Tensão Direita (V): <span id="voltage2-value" class="value-display">-20</span></label>
+          <input type="range" id="voltage2" min="-50" max="50" step="1" value="-20">
+        </div>
+        
+        <div class="control-group">
+          <label for="equipotential-lines">Linhas Equipotenciais: <span id="equipotential-lines-value" class="value-display">15</span></label>
+          <input type="range" id="equipotential-lines" min="5" max="20" step="1" value="15">
+        </div>
+        
+        <div class="button-row">
+          <button id="reset-btn">Reiniciar</button>
+          <button id="pause-btn">Pausar</button>
+        </div>
+      </div>
+      
+      <div id="canvas-container">
+        <canvas id="simulation-canvas"></canvas>
+        
+        <div class="avatar-overlay">
+          <div class="avatar-card">
+            <div class="avatar-header">
+              <h3>Avatar de Ensino</h3>
+              <button id="minimize-avatar" class="small secondary">−</button>
+            </div>
+            <div class="avatar-stage">
+              <svg viewBox="0 0 320 320" width="200" height="200" role="img" aria-label="Avatar ensinando">
+                <!-- corpo -->
+                <rect x="110" y="160" width="100" height="90" rx="18" fill="#e6eefc" />
+
+                <!-- braço esquerdo fixo -->
+                <g>
+                  <rect x="210" y="160" width="18" height="70" rx="9" fill="var(--skin)" />
+                </g>
+
+                <!-- braço direito animado -->
+                <g id="arm-right" class="arm">
+                  <rect x="92" y="150" width="18" height="50" rx="9" fill="var(--skin)" />
+                  <rect x="82" y="195" width="18" height="30" rx="9" fill="var(--skin)" transform="rotate(-30 92 200)" />
+                </g>
+
+                <!-- cabeça -->
+                <circle cx="160" cy="110" r="60" fill="var(--skin)" />
+                
+                <!-- cabelo -->
+                <path d="M 100 80 Q 160 50 220 80 Q 210 65 160 60 Q 110 65 100 80 Z" fill="#654321" />
+                <circle cx="120" cy="75" r="8" fill="#654321" />
+                <circle cx="200" cy="75" r="8" fill="#654321" />
+                <circle cx="140" cy="65" r="6" fill="#654321" />
+                <circle cx="180" cy="65" r="6" fill="#654321" />
+                
+                <!-- olhos -->
+                <circle cx="140" cy="100" r="6" fill="#1f2937" />
+                <circle cx="180" cy="100" r="6" fill="#1f2937" />
+
+                <!-- boca -->
+                <g class="mouth" id="mouth">
+                  <ellipse cx="160" cy="142" rx="18" ry="8" fill="#7c2d12" />
+                </g>
+              </svg>
+            </div>
+            <div class="avatar-controls">
+              <textarea id="text">Olá! Esta simulação mostra as linhas equipotenciais em uma cuba eletrolítica com dois eletrodos laterais. As linhas equipotenciais conectam pontos com o mesmo potencial elétrico. Você pode ajustar as tensões dos eletrodos e observar como as linhas se modificam!</textarea>
+              <div class="button-row">
+                <button id="speak" class="small">▶️ Falar</button>
+                <button id="stop" class="small secondary">■ Parar</button>
+                <button id="wave" class="small secondary">👋 Acenar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-panel">
+      <div class="info-tabs">
+        <button class="info-tab active" data-tab="flowchart">Fluxograma</button>
+        <button class="info-tab" data-tab="explanation">Explicação</button>
+        <button class="info-tab" data-tab="physics">Física</button>
+      </div>
+      <div class="info-content">
+        <div id="flowchart" class="tab-content active">
+          <h2>Fluxograma da Simulação</h2>
+          <div class="simple-flowchart">
+            <div class="flow-block main">[Início]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Configuração Inicial]
+              <div style="font-size: 11px; margin-top: 5px;">
+                - Definir parâmetros da simulação<br>
+                - Criar grade de pontos<br>
+                - Definir posições dos eletrodos<br>
+                - Definir tensões dos eletrodos
+              </div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Iniciar Loop de Animação ("update")]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Limpar o Canvas]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block section">Bloco 1: Cálculo do Potencial</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Calcular potencial em cada ponto da grade usando relaxação]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block section" style="font-size: 11px;">Loop: para cada iteração</div>
+            <div class="loop-container">
+              <div class="flow-block loop">[Atualizar potencial como média dos vizinhos]</div>
+              <div class="flow-arrow loop">↓</div>
+              
+              <div class="flow-block loop">[Manter valores fixos nos eletrodos]</div>
+              <div class="flow-arrow loop" style="font-style: italic;">→ retorna para próxima iteração</div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            <div class="flow-block section">Bloco 2: Linhas Equipotenciais</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Determinar valores das linhas equipotenciais]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block section" style="font-size: 11px;">Loop: para cada linha equipotencial</div>
+            <div class="loop-container">
+              <div class="flow-block loop">[Encontrar pontos com potencial próximo ao valor da linha]</div>
+              <div class="flow-arrow loop">↓</div>
+              
+              <div class="flow-block loop">[Desenhar linha equipotencial]</div>
+              <div class="flow-arrow loop" style="font-style: italic;">→ retorna para próxima linha</div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            <div class="flow-block section">Bloco 3: Desenho</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Desenhar os eletrodos]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Desenhar linhas de campo elétrico]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Exibir Canvas Atualizado]</div>
+            <div class="flow-arrow return">=== Retorno para o início do Loop de Animação ===</div>
+          </div>
+        </div>
+        
+        <div id="explanation" class="tab-content">
+          <h2>Explicação da Simulação</h2>
+          <p>Esta simulação mostra as linhas equipotenciais em uma cuba eletrolítica com dois eletrodos laterais. As linhas equipotenciais conectam pontos com o mesmo potencial elétrico.</p>
+          
+          <h3>Como Funciona</h3>
+          <p>O potencial elétrico é calculado usando o método de relaxação, que resolve a equação de Laplace numericamente. Os valores dos eletrodos são fixos e o potencial nos outros pontos é calculado como a média dos vizinhos.</p>
+          
+          <p>As linhas equipotenciais são sempre perpendiculares às linhas de campo elétrico. Em uma cuba eletrolítica, estas linhas podem ser visualizadas experimentalmente.</p>
+          
+          <h3>Controles</h3>
+          <ul>
+            <li><strong>Tensão Esquerda e Tensão Direita:</strong> Ajuste os valores das tensões para ver como as linhas equipotenciais se comportam</li>
+            <li><strong>Linhas Equipotenciais:</strong> Ajuste o número de linhas equipotenciais a serem exibidas</li>
+            <li><strong>Reiniciar:</strong> Volta a simulação ao estado inicial</li>
+            <li><strong>Pausar:</strong> Pausa ou continua a simulação</li>
+          </ul>
+        </div>
+        
+        <div id="physics" class="tab-content">
+          <h2>Física Aplicada</h2>
+          <p>A simulação calcula o potencial elétrico em uma cuba eletrolítica usando o método de relaxação para resolver a equação de Laplace.</p>
+          
+          <p>A equação de Laplace para o potencial elétrico é:</p>
+          <p style="text-align: center; font-style: italic;">∇²V = 0</p>
+          
+          <p>Onde:</p>
+          <ul>
+            <li><strong>V</strong> é o potencial elétrico</li>
+            <li><strong>∇²</strong> é o operador Laplaciano</li>
+          </ul>
+          
+          <h3>Linhas Equipotenciais</h3>
+          <p>As linhas equipotenciais são curvas que conectam pontos com o mesmo potencial elétrico. Elas têm várias propriedades importantes:</p>
+          <ul>
+            <li>São sempre perpendiculares às linhas de campo elétrico</li>
+            <li>O trabalho realizado para mover uma carga ao longo de uma linha equipotencial é zero</li>
+            <li>Nunca se cruzam</li>
+          </ul>
+          
+          <h3>Cuba Eletrolítica</h3>
+          <p>Uma cuba eletrolítica é um dispositivo experimental usado para visualizar campos elétricos e linhas equipotenciais. Consiste em uma cuba rasa contendo uma solução eletrolítica com eletrodos conectados a diferentes potenciais.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Adicione estas variáveis para controle do arraste do avatar
+    let avatarDragging = false;
+    let avatarDragOffset = { x: 0, y: 0 };
+    const avatarCard = document.querySelector('.avatar-card');
+    const avatarOverlay = document.querySelector('.avatar-overlay');
+
+    // Adicione estes eventos para o avatar
+    const avatarHeader = document.querySelector('.avatar-header');
+
+    avatarHeader.addEventListener('mousedown', (e) => {
+        avatarDragging = true;
+        const rect = avatarOverlay.getBoundingClientRect();
+        avatarDragOffset.x = e.clientX - rect.left;
+        avatarDragOffset.y = e.clientY - rect.top;
+        
+        // Adicionar classe para feedback visual
+        avatarCard.style.opacity = '0.9';
+        avatarCard.style.cursor = 'grabbing';
+        avatarOverlay.style.cursor = 'grabbing';
+        
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (avatarDragging) {
+            // Calcular nova posição relativa à página inteira
+            let newX = e.clientX - avatarDragOffset.x;
+            let newY = e.clientY - avatarDragOffset.y;
+            
+            // Limitar aos limites da janela
+            const maxX = window.innerWidth - avatarOverlay.offsetWidth;
+            const maxY = window.innerHeight - avatarOverlay.offsetHeight;
+            
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+            
+            // Aplicar nova posição
+            avatarOverlay.style.left = newX + 'px';
+            avatarOverlay.style.top = newY + 'px';
+            avatarOverlay.style.right = 'auto';
+            avatarOverlay.style.bottom = 'auto';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (avatarDragging) {
+            avatarDragging = false;
+            avatarCard.style.opacity = '1';
+            avatarCard.style.cursor = 'grab';
+            avatarOverlay.style.cursor = 'grab';
+        }
+    });
+
+    // Adicione este estilo CSS para o avatar-overlay para permitir posicionamento absoluto na página toda
+    const style = document.createElement('style');
+    style.textContent = `
+        .avatar-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            cursor: grab;
+        }
+        
+        .avatar-overlay:active {
+            cursor: grabbing;
+        }
+        
+        .avatar-header {
+            cursor: grab;
+            user-select: none;
+        }
+        
+        .avatar-header:active {
+            cursor: grabbing;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Configurações iniciais da simulação
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Ajustar tamanho do canvas
+    function resizeCanvas() {
+      const container = document.getElementById('canvas-container');
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    // Parâmetros da simulação
+    let simulationRunning = true;
+    const GRID_SIZE = 100;
+    const ITERATIONS = 1000;
+    
+    // Tensões iniciais
+    let tensaoEsquerda = 20.0;
+    let tensaoDireita = -20.0;
+    
+    // Grade de potencial
+    let potential = [];
+    let electricFieldX = [];
+    let electricFieldY = [];
+    
+    // Inicializar arrays
+    function initializeArrays() {
+      potential = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+      electricFieldX = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+      electricFieldY = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+    }
+    
+    // Simular cuba eletrolítica
+    function simulateElectrolyticTank() {
+      // Definir valores dos eletrodos
+      for (let i = 0; i < GRID_SIZE; i++) {
+        potential[i][0] = tensaoEsquerda;        // Eletrodo esquerdo
+        potential[i][GRID_SIZE-1] = tensaoDireita; // Eletrodo direito
+      }
+      
+      // Executar método de relaxação
+      for (let iter = 0; iter < ITERATIONS; iter++) {
+        for (let i = 1; i < GRID_SIZE-1; i++) {
+          for (let j = 1; j < GRID_SIZE-1; j++) {
+            // Apenas atualiza pontos que não são eletrodos
+            if (j !== 0 && j !== GRID_SIZE-1) {
+              potential[i][j] = (potential[i-1][j] + potential[i+1][j] + 
+                                potential[i][j-1] + potential[i][j+1]) / 4.0;
+            }
+          }
+        }
+      }
+      
+      // Calcular campo elétrico (gradiente negativo do potencial)
+      for (let i = 1; i < GRID_SIZE-1; i++) {
+        for (let j = 1; j < GRID_SIZE-1; j++) {
+          electricFieldX[i][j] = -(potential[i][j+1] - potential[i][j-1]) / 2.0;
+          electricFieldY[i][j] = -(potential[i+1][j] - potential[i-1][j]) / 2.0;
+        }
+      }
+    }
+    
+    // Desenhar a simulação
+    function drawSimulation() {
+      // Limpar canvas
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Executar simulação
+      simulateElectrolyticTank();
+      
+      // Calcular escala para desenhar
+      const scaleX = canvas.width / GRID_SIZE;
+      const scaleY = canvas.height / GRID_SIZE;
+      
+      // Encontrar valores mínimo e máximo de potencial para normalização
+      let minPotential = Math.min(tensaoEsquerda, tensaoDireita);
+      let maxPotential = Math.max(tensaoEsquerda, tensaoDireita);
+      
+      // Desenhar mapa de calor do potencial
+      for (let i = 0; i < GRID_SIZE; i++) {
+        for (let j = 0; j < GRID_SIZE; j++) {
+          // Normalizar o valor do potencial para uma cor entre 0 e 255
+          let normalizedValue = (potential[i][j] - minPotential) / (maxPotential - minPotential);
+          
+          // Usar uma paleta de cores similar ao 'plasma' do matplotlib
+          let r, g, b;
+          
+          if (normalizedValue < 0.25) {
+            r = 0;
+            g = 0;
+            b = Math.floor(255 * (normalizedValue / 0.25));
+          } else if (normalizedValue < 0.5) {
+            r = Math.floor(255 * ((normalizedValue - 0.25) / 0.25));
+            g = 0;
+            b = 255;
+          } else if (normalizedValue < 0.75) {
+            r = 255;
+            g = Math.floor(255 * ((normalizedValue - 0.5) / 0.25));
+            b = 255 - Math.floor(255 * ((normalizedValue - 0.5) / 0.25));
+          } else {
+            r = 255;
+            g = 255;
+            b = Math.floor(255 * (1 - (normalizedValue - 0.75) / 0.25));
+          }
+          
+          ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          ctx.fillRect(j * scaleX, i * scaleY, scaleX, scaleY);
+        }
+      }
+      
+      // Desenhar linhas equipotenciais
+      const numEquipotentialLines = parseInt(document.getElementById('equipotential-lines').value);
+      
+      if (minPotential !== maxPotential) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        
+        // Calcular valores das linhas equipotenciais
+        const equipotentialValues = [];
+        for (let i = 0; i <= numEquipotentialLines; i++) {
+          const value = minPotential + (maxPotential - minPotential) * i / numEquipotentialLines;
+          equipotentialValues.push(value);
+        }
+        
+        // Desenhar cada linha equipotencial
+        for (const targetValue of equipotentialValues) {
+          ctx.beginPath();
+          
+          for (let i = 0; i < GRID_SIZE - 1; i++) {
+            for (let j = 0; j < GRID_SIZE - 1; j++) {
+              const p00 = potential[i][j];
+              const p10 = potential[i+1][j];
+              const p01 = potential[i][j+1];
+              const p11 = potential[i+1][j+1];
+              
+              // Verificar se a linha equipotencial passa por este quadrado
+              const hasLine = 
+                (p00 <= targetValue && p10 >= targetValue) ||
+                (p00 >= targetValue && p10 <= targetValue) ||
+                (p00 <= targetValue && p01 >= targetValue) ||
+                (p00 >= targetValue && p01 <= targetValue) ||
+                (p10 <= targetValue && p11 >= targetValue) ||
+                (p10 >= targetValue && p11 <= targetValue) ||
+                (p01 <= targetValue && p11 >= targetValue) ||
+                (p01 >= targetValue && p11 <= targetValue);
+              
+              if (hasLine) {
+                // Interpolar para encontrar pontos na linha equipotencial
+                const points = [];
+                
+                // Lado esquerdo
+                if ((p00 <= targetValue && p01 >= targetValue) || (p00 >= targetValue && p01 <= targetValue)) {
+                  const t = (targetValue - p00) / (p01 - p00);
+                  const x = j * scaleX;
+                  const y = (i + t) * scaleY;
+                  points.push({x, y});
+                }
+                
+                // Lado direito
+                if ((p10 <= targetValue && p11 >= targetValue) || (p10 >= targetValue && p11 <= targetValue)) {
+                  const t = (targetValue - p10) / (p11 - p10);
+                  const x = (j+1) * scaleX;
+                  const y = (i + t) * scaleY;
+                  points.push({x, y});
+                }
+                
+                // Lado superior
+                if ((p00 <= targetValue && p10 >= targetValue) || (p00 >= targetValue && p10 <= targetValue)) {
+                  const t = (targetValue - p00) / (p10 - p00);
+                  const x = (j + t) * scaleX;
+                  const y = i * scaleY;
+                  points.push({x, y});
+                }
+                
+                // Lado inferior
+                if ((p01 <= targetValue && p11 >= targetValue) || (p01 >= targetValue && p11 <= targetValue)) {
+                  const t = (targetValue - p01) / (p11 - p01);
+                  const x = (j + t) * scaleX;
+                  const y = (i+1) * scaleY;
+                  points.push({x, y});
+                }
+                
+                // Desenhar segmento da linha equipotencial
+                if (points.length >= 2) {
+                  ctx.moveTo(points[0].x, points[0].y);
+                  ctx.lineTo(points[1].x, points[1].y);
+                }
+              }
+            }
+          }
+          
+          ctx.stroke();
+        }
+      }
+      
+      // Desenhar linhas de campo elétrico
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 0.7;
+      
+      // Desenhar vetores do campo elétrico em uma grade mais espaçada
+      const step = 5;
+      for (let i = step; i < GRID_SIZE-step; i += step) {
+        for (let j = step; j < GRID_SIZE-step; j += step) {
+          const startX = j * scaleX;
+          const startY = i * scaleY;
+          
+          // Normalizar o vetor para um comprimento fixo
+          const magnitude = Math.sqrt(
+            electricFieldX[i][j] * electricFieldX[i][j] + 
+            electricFieldY[i][j] * electricFieldY[i][j]
+          );
+          
+          if (magnitude > 0) {
+            const endX = startX + (electricFieldX[i][j] / magnitude) * step * 2;
+            const endY = startY + (electricFieldY[i][j] / magnitude) * step * 2;
+            
+            // Desenhar uma seta
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+            
+            // Desenhar a ponta da seta
+            const angle = Math.atan2(electricFieldY[i][j], electricFieldX[i][j]);
+            drawArrowHead(endX, endY, angle);
+          }
+        }
+      }
+      
+      // Desenhar eletrodos
+      ctx.fillStyle = '#666666';
+      ctx.fillRect(0, 0, scaleX, canvas.height);
+      ctx.fillRect(canvas.width - scaleX, 0, scaleX, canvas.height);
+      
+      // Adicionar rótulos
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${tensaoEsquerda}V`, scaleX / 2, canvas.height / 2);
+      ctx.fillText(`${tensaoDireita}V`, canvas.width - scaleX / 2, canvas.height / 2);
+      
+      // Desenhar informações
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`Cuba Eletrolítica\nEsquerda: ${tensaoEsquerda}V | Direita: ${tensaoDireita}V`, 10, 10);
+    }
+    
+    // Função para desenhar ponta de seta
+    function drawArrowHead(x, y, angle) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      
+      const headSize = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-headSize, -headSize/2);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-headSize, headSize/2);
+      ctx.stroke();
+      
+      ctx.restore();
+    }
+    
+    // Loop de animação
+    function animationLoop() {
+      if (simulationRunning) {
+        drawSimulation();
+      }
+      requestAnimationFrame(animationLoop);
+    }
+    
+    // Inicializar e iniciar a simulação
+    initializeArrays();
+    animationLoop();
+    
+    // Controles da simulação
+    document.getElementById('voltage1').addEventListener('input', function() {
+      tensaoEsquerda = parseFloat(this.value);
+      document.getElementById('voltage1-value').textContent = this.value;
+    });
+    
+    document.getElementById('voltage2').addEventListener('input', function() {
+      tensaoDireita = parseFloat(this.value);
+      document.getElementById('voltage2-value').textContent = this.value;
+    });
+    
+    document.getElementById('equipotential-lines').addEventListener('input', function() {
+      document.getElementById('equipotential-lines-value').textContent = this.value;
+    });
+    
+    document.getElementById('reset-btn').addEventListener('click', function() {
+      tensaoEsquerda = 20.0;
+      tensaoDireita = -20.0;
+      
+      // Atualizar controles
+      document.getElementById('voltage1').value = 20;
+      document.getElementById('voltage1-value').textContent = '20';
+      document.getElementById('voltage2').value = -20;
+      document.getElementById('voltage2-value').textContent = '-20';
+      document.getElementById('equipotential-lines').value = 15;
+      document.getElementById('equipotential-lines-value').textContent = '15';
+    });
+    
+    document.getElementById('pause-btn').addEventListener('click', function() {
+      simulationRunning = !simulationRunning;
+      this.textContent = simulationRunning ? 'Pausar' : 'Continuar';
+    });
+    
+    // Controles do avatar
+    const mouth = document.getElementById('mouth');
+    const arm = document.getElementById('arm-right');
+    const btnSpeak = document.getElementById('speak');
+    const btnStop = document.getElementById('stop');
+    const btnWave = document.getElementById('wave');
+    const textarea = document.getElementById('text');
+    const minimizeBtn = document.getElementById('minimize-avatar');
+    
+    let synth = window.speechSynthesis;
+    let utterance = null;
+    
+    function startMouth() { mouth.classList.add('talking'); }
+    function stopMouth() { mouth.classList.remove('talking'); }
+    function startWave() { arm.classList.add('waving'); }
+    function stopWave() { arm.classList.remove('waving'); }
+    
+    btnSpeak.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) {
+        alert('Navegador não suporta Web Speech API');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      utterance = new SpeechSynthesisUtterance(textarea.value);
+      utterance.onstart = () => { startMouth(); startWave(); };
+      utterance.onend = () => { stopMouth(); stopWave(); };
+      synth.speak(utterance);
+    });
+    
+    btnStop.addEventListener('click', () => {
+      synth.cancel();
+      stopMouth();
+      stopWave();
+    });
+    
+    btnWave.addEventListener('click', () => {
+      startWave();
+      setTimeout(() => stopWave(), 1500);
+    });
+    
+    minimizeBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Impedir que o clique propague para o header
+        
+        const avatarControls = document.querySelector('.avatar-controls');
+        const avatarStage = document.querySelector('.avatar-stage');
+        
+        if (avatarControls.style.display !== 'none') {
+            avatarControls.style.display = 'none';
+            avatarStage.style.display = 'none';
+            minimizeBtn.textContent = '+';
+        } else {
+            avatarControls.style.display = 'block';
+            avatarStage.style.display = 'flex';
+            minimizeBtn.textContent = '−';
+        }
+    });
+    
+    // Controles das abas
+    const tabs = document.querySelectorAll('.info-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and contents
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

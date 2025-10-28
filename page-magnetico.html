@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulação de Campo Magnético com Avatar</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --accent: #4f46e5;
+      --skin: #ffd3b6;
+      --card-bg: white;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      background: var(--bg);
+      color: var(--text-primary);
+    }
+    
+    .container {
+      display: flex;
+      height: 100vh;
+      padding: 20px;
+      gap: 20px;
+    }
+    
+    .simulation-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(11, 12, 18, 0.06);
+      overflow: hidden;
+    }
+    
+    .controls {
+      padding: 20px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+    }
+    
+    .value-display {
+      display: inline-block;
+      width: 40px;
+      text-align: right;
+    }
+    
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    button.secondary {
+      background: #f3f4f6;
+      color: #111;
+    }
+    
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    
+    #canvas-container {
+      flex: 1;
+      background: #0c0c0c;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    #simulation-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    #conductor {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 30px;
+      height: 300px;
+      background: linear-gradient(to bottom, #3a7bd5, #e63946);
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(230, 57, 70, 0.7);
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    
+    #compass {
+      position: absolute;
+      top: 75%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px;
+      height: 120px;
+      background-color: #444;
+      border-radius: 50%;
+      border: 4px solid #ccc;
+      display: grid;
+      place-items: center;
+      cursor: grab;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
+      z-index: 20;
+    }
+    
+    #compass-needle {
+      width: 18px;
+      height: 100px;
+      position: relative;
+      transition: transform 0.1s linear;
+    }
+    
+    #compass-needle::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-bottom: 50px solid #e63946;
+    }
+    
+    #compass-needle::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-top: 50px solid #f1f1f1;
+    }
+    
+    .field-arrow {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      pointer-events: none;
+      z-index: 1;
+      transform-origin: center center;
+    }
+    
+    .field-arrow::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 10px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 15px solid rgba(255, 255, 255, 0.9);
+    }
+    
+    .field-arrow::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 14px;
+      width: 2px;
+      height: 15px;
+      background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .avatar-overlay {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+    }
+    
+    .avatar-card {
+      width: 360px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(11, 12, 18, 0.15);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    
+    .avatar-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .avatar-header {
+      padding: 12px 16px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .avatar-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+    
+    .avatar-stage {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9fafb;
+    }
+    
+    .avatar-controls {
+      padding: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #e6e9ef;
+      resize: vertical;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    
+    .small {
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+    
+    .hint {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .info-panel {
+      width: 400px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(11, 12, 18, 0.06);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .info-tabs {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-tabp {
+      width: 200px;
+      height: 50px;
+      margin-right: 10px;
+    }
+    
+    .info-tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      background: rgb(150, 167, 254);
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    
+    .info-tab.active {
+      background: var(--accent);
+      color: rgb(255, 255, 255);
+    }
+    
+    .info-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    h2 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    
+    /* Estilos para o fluxograma simplificado */
+    .simple-flowchart {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    
+    .flow-block {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 8px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .flow-block.main {
+      background: #f6ffed;
+      border-color: #b7eb8f;
+    }
+    
+    .flow-block.loop {
+      background: #fff7e6;
+      border-color: #ffd591;
+      margin-left: 20px;
+      position: relative;
+    }
+    
+    .flow-block.loop::before {
+      content: "↳";
+      position: absolute;
+      left: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #ffa940;
+    }
+    
+    .flow-block.section {
+      background: #f9f0ff;
+      border-color: #d3adf7;
+      text-align: center;
+      font-weight: bold;
+      margin: 12px 0 8px 0;
+    }
+    
+    .flow-arrow {
+      text-align: center;
+      margin: 2px 0;
+      color: #8c8c8c;
+    }
+    
+    .flow-arrow.loop {
+      margin-left: 20px;
+    }
+    
+    .flow-arrow.return {
+      text-align: center;
+      font-style: italic;
+      margin: 8px 0;
+      color: #8c8c8c;
+    }
+    
+    .loop-container {
+      margin-left: 10px;
+      border-left: 2px dashed #ffa940;
+      padding-left: 10px;
+    }
+    
+    /* Boca animada (abre e fecha) */
+    .mouth ellipse {
+      transform-origin: 160px 142px;
+    }
+    
+    .mouth.talking ellipse {
+      animation: mouthTalk 250ms ease-in-out infinite;
+    }
+    
+    @keyframes mouthTalk {
+      0% { transform: scaleY(1); }
+      50% { transform: scaleY(0.3); }
+      100% { transform: scaleY(1); }
+    }
+    
+    /* Braço direito acenando */
+    .arm {
+      transform-origin: 92px 150px;
+    }
+    
+    .arm.waving {
+      animation: wave 1s ease-in-out infinite;
+    }
+    
+    @keyframes wave {
+      0% { transform: rotate(0deg); }
+      25% { transform: rotate(30deg); }
+      50% { transform: rotate(-15deg); }
+      75% { transform: rotate(25deg); }
+      100% { transform: rotate(0deg); }
+    }
+    
+    @media (max-width: 1200px) {
+      .container {
+        flex-direction: column;
+        height: auto;
+      }
+      
+      .info-panel {
+        width: 100%;
+        height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="simulation-panel">
+
+      <div class="info-tabs">
+        <button class="info-tabp" onclick="window.location.href='page-cargas.html'" data-tab="flowchart">Cargas Elétricas</button>
+        <button class="info-tabp" onclick="window.location.href='page-cuba.html'" data-tab="explanation">Cuba Eletrolítica</button>
+        <button class="info-tabp" onclick="window.location.href='page-magnetico.html'" data-tab="physics">Campo Magnético</button>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="current-slider">Corrente no Condutor: <span id="current-value" class="value-display">50 A</span></label>
+          <input type="range" id="current-slider" min="-100" max="100" value="50" step="1">
+          <div class="hint">Valores negativos: corrente para baixo</div>
+          <div class="hint">Valores positivos: corrente para cima</div>
+        </div>
+        
+        <div class="button-row">
+          <button id="reset-btn">Reiniciar</button>
+        </div>
+      </div>
+      
+      <div id="canvas-container">
+        <div id="simulation-container">
+          <div id="conductor">I</div>
+          <div id="compass">
+            <div id="compass-needle"></div>
+          </div>
+        </div>
+        
+        <div class="avatar-overlay">
+          <div class="avatar-card">
+            <div class="avatar-header">
+              <h3>Avatar de Ensino</h3>
+              <button id="minimize-avatar" class="small secondary">−</button>
+            </div>
+            <div class="avatar-stage">
+              <svg viewBox="0 0 320 320" width="200" height="200" role="img" aria-label="Avatar ensinando">
+                <!-- corpo -->
+                <rect x="110" y="160" width="100" height="90" rx="18" fill="#e6eefc" />
+
+                <!-- braço esquerdo fixo -->
+                <g>
+                  <rect x="210" y="160" width="18" height="70" rx="9" fill="var(--skin)" />
+                </g>
+
+                <!-- braço direito animado -->
+                <g id="arm-right" class="arm">
+                  <rect x="92" y="150" width="18" height="50" rx="9" fill="var(--skin)" />
+                  <rect x="82" y="195" width="18" height="30" rx="9" fill="var(--skin)" transform="rotate(-30 92 200)" />
+                </g>
+
+                <!-- cabeça -->
+                <circle cx="160" cy="110" r="60" fill="var(--skin)" />
+                
+                <!-- cabelo -->
+                <path d="M 100 80 Q 160 50 220 80 Q 210 65 160 60 Q 110 65 100 80 Z" fill="#654321" />
+                <circle cx="120" cy="75" r="8" fill="#654321" />
+                <circle cx="200" cy="75" r="8" fill="#654321" />
+                <circle cx="140" cy="65" r="6" fill="#654321" />
+                <circle cx="180" cy="65" r="6" fill="#654321" />
+                
+                <!-- olhos -->
+                <circle cx="140" cy="100" r="6" fill="#1f2937" />
+                <circle cx="180" cy="100" r="6" fill="#1f2937" />
+
+                <!-- boca -->
+                <g class="mouth" id="mouth">
+                  <ellipse cx="160" cy="142" rx="18" ry="8" fill="#7c2d12" />
+                </g>
+              </svg>
+            </div>
+            <div class="avatar-controls">
+              <textarea id="text">Olá! Esta simulação mostra o campo magnético gerado por um condutor retilíneo percorrido por corrente elétrica. A bússola mostra a direção do campo magnético. Você pode arrastar a bússola e ajustar a corrente no condutor!</textarea>
+              <div class="button-row">
+                <button id="speak" class="small">▶️ Falar</button>
+                <button id="stop" class="small secondary">■ Parar</button>
+                <button id="wave" class="small secondary">👋 Acenar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-panel">
+      <div class="info-tabs">
+        <button class="info-tab active" data-tab="flowchart">Fluxograma</button>
+        <button class="info-tab" data-tab="explanation">Explicação</button>
+        <button class="info-tab" data-tab="physics">Física</button>
+      </div>
+      <div class="info-content">
+        <div id="flowchart" class="tab-content active">
+          <h2>Fluxograma da Simulação</h2>
+          <div class="simple-flowchart">
+            <div class="flow-block main">[Início]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Configuração Inicial]
+              <div style="font-size: 11px; margin-top: 5px;">
+                - Criar container da simulação<br>
+                - Posicionar condutor e bússola<br>
+                - Criar grade de setas do campo<br>
+                - Configurar controles
+              </div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Iniciar Loop de Atualização]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block section">Bloco 1: Cálculo do Campo Magnético</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Obter valor da corrente (I)]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block section" style="font-size: 11px;">Loop: para cada seta do campo</div>
+            <div class="loop-container">
+              <div class="flow-block loop">[Calcular vetor do condutor à seta]</div>
+              <div class="flow-arrow loop">↓</div>
+              
+              <div class="flow-block loop">[Aplicar Lei de Biot-Savart: B = (μ₀I)/(2πr)]</div>
+              <div class="flow-arrow loop">↓</div>
+              
+              <div class="flow-block loop">[Determinar direção do campo (regra da mão direita)]</div>
+              <div class="flow-arrow loop" style="font-style: italic;">→ retorna para próxima seta</div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            <div class="flow-block section">Bloco 2: Atualização Visual</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Rotacionar setas do campo magnético]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Atualizar bússola com campo resultante]</div>
+            <div class="flow-arrow">↓</div>
+            
+            <div class="flow-block main">[Atualizar cor do condutor baseado na corrente]</div>
+            <div class="flow-arrow return">=== Retorno para o início do Loop ===</div>
+          </div>
+        </div>
+        
+        <div id="explanation" class="tab-content">
+          <h2>Explicação da Simulação</h2>
+          <p>Esta simulação mostra o campo magnético gerado por um condutor retilíneo percorrido por corrente elétrica. As setas brancas representam a direção do campo magnético.</p>
+          
+          <h3>Como Funciona</h3>
+          <p>O campo magnético é calculado usando a Lei de Biot-Savart para um condutor retilíneo. A intensidade do campo diminui com a distância ao condutor.</p>
+          
+          <p>Quando a corrente é positiva (para cima), o campo magnético gira no sentido anti-horário. Quando é negativa (para baixo), gira no sentido horário.</p>
+          
+          <h3>Controles</h3>
+          <ul>
+            <li><strong>Corrente no Condutor:</strong> Ajuste a intensidade e direção da corrente</li>
+            <li><strong>Arrastar a Bússola:</strong> Clique e arraste para mover a bússola</li>
+            <li><strong>Reiniciar:</strong> Volta a simulação ao estado inicial</li>
+          </ul>
+        </div>
+        
+        <div id="physics" class="tab-content">
+          <h2>Física Aplicada</h2>
+          <p>A simulação usa a Lei de Biot-Savart para calcular o campo magnético gerado por um condutor retilíneo infinito:</p>
+          
+          <p style="text-align: center; font-style: italic;">B = (μ₀ * I) / (2π * r)</p>
+          
+          <p>Onde:</p>
+          <ul>
+            <li><strong>B</strong> é a intensidade do campo magnético</li>
+            <li><strong>μ₀</strong> é a permeabilidade do vácuo (4π × 10⁻⁷ N/A²)</li>
+            <li><strong>I</strong> é a corrente elétrica</li>
+            <li><strong>r</strong> é a distância ao condutor</li>
+          </ul>
+          
+          <h3>Regra da Mão Direita</h3>
+          <p>A direção do campo magnético é determinada pela regra da mão direita:</p>
+          <ul>
+            <li>Segure o condutor com a mão direita</li>
+            <li>Polegar apontando no sentido da corrente</li>
+            <li>Os dedos curvados indicam o sentido do campo magnético</li>
+          </ul>
+          
+          <h3>Bússola</h3>
+          <p>A agulha da bússola alinha-se com o campo magnético resultante, mostrando visualmente a direção do campo em sua posição.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Adicione estas variáveis para controle do arraste do avatar
+    let avatarDragging = false;
+    let avatarDragOffset = { x: 0, y: 0 };
+    const avatarCard = document.querySelector('.avatar-card');
+    const avatarOverlay = document.querySelector('.avatar-overlay');
+
+    // Adicione estes eventos para o avatar
+    const avatarHeader = document.querySelector('.avatar-header');
+
+    avatarHeader.addEventListener('mousedown', (e) => {
+        avatarDragging = true;
+        const rect = avatarOverlay.getBoundingClientRect();
+        avatarDragOffset.x = e.clientX - rect.left;
+        avatarDragOffset.y = e.clientY - rect.top;
+        
+        // Adicionar classe para feedback visual
+        avatarCard.style.opacity = '0.9';
+        avatarCard.style.cursor = 'grabbing';
+        avatarOverlay.style.cursor = 'grabbing';
+        
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (avatarDragging) {
+            // Calcular nova posição relativa à página inteira
+            let newX = e.clientX - avatarDragOffset.x;
+            let newY = e.clientY - avatarDragOffset.y;
+            
+            // Limitar aos limites da janela
+            const maxX = window.innerWidth - avatarOverlay.offsetWidth;
+            const maxY = window.innerHeight - avatarOverlay.offsetHeight;
+            
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+            
+            // Aplicar nova posição
+            avatarOverlay.style.left = newX + 'px';
+            avatarOverlay.style.top = newY + 'px';
+            avatarOverlay.style.right = 'auto';
+            avatarOverlay.style.bottom = 'auto';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (avatarDragging) {
+            avatarDragging = false;
+            avatarCard.style.opacity = '1';
+            avatarCard.style.cursor = 'grab';
+            avatarOverlay.style.cursor = 'grab';
+        }
+    });
+
+    // Adicione este estilo CSS para o avatar-overlay para permitir posicionamento absoluto na página toda
+    const style = document.createElement('style');
+    style.textContent = `
+        .avatar-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            cursor: grab;
+        }
+        
+        .avatar-overlay:active {
+            cursor: grabbing;
+        }
+        
+        .avatar-header {
+            cursor: grab;
+            user-select: none;
+        }
+        
+        .avatar-header:active {
+            cursor: grabbing;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // SIMULAÇÃO DE CAMPO MAGNÉTICO
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('simulation-container');
+        const conductor = document.getElementById('conductor');
+        const compass = document.getElementById('compass');
+        const needle = document.getElementById('compass-needle');
+        const currentSlider = document.getElementById('current-slider');
+        const currentValue = document.getElementById('current-value');
+
+        let isDragging = false;
+        let offsetX, offsetY;
+        let containerRect = container.getBoundingClientRect();
+        
+        // Valor da corrente (em amperes)
+        let current = 50;
+        
+        // Array para armazenar as setas do campo magnético
+        let fieldArrows = [];
+        
+        // Atualizar o valor da corrente exibido
+        function updateCurrentDisplay() {
+            currentValue.textContent = `${current} A`;
+            
+            // Atualizar a cor do condutor baseado na direção da corrente
+            if (current > 0) {
+                conductor.style.background = 'linear-gradient(to bottom, #3a7bd5, #e63946)';
+            } else if (current < 0) {
+                conductor.style.background = 'linear-gradient(to bottom, #e63946, #3a7bd5)';
+            } else {
+                conductor.style.background = '#666';
+            }
+            
+            // Atualizar a simulação
+            updateCompass();
+        }
+        
+        // Event listener para o slider de corrente
+        currentSlider.addEventListener('input', () => {
+            current = parseInt(currentSlider.value);
+            updateCurrentDisplay();
+        });
+        
+        // Criar grade de setas do campo magnético
+        function createFieldArrows() {
+            // Limpar setas existentes
+            fieldArrows.forEach(arrow => arrow.remove());
+            fieldArrows = [];
+            
+            // Definir espaçamento da grade
+            const spacing = 80;
+            
+            // Calcular número de setas em cada direção
+            const rows = Math.floor(containerRect.height / spacing);
+            const cols = Math.floor(containerRect.width / spacing);
+            
+            // Criar setas
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'field-arrow';
+                    
+                    // Posicionar seta na grade
+                    const x = j * spacing + spacing/2;
+                    const y = i * spacing + spacing/2;
+                    
+                    arrow.style.left = `${x}px`;
+                    arrow.style.top = `${y}px`;
+                    
+                    container.appendChild(arrow);
+                    fieldArrows.push(arrow);
+                }
+            }
+        }
+        
+        // Atualizar orientação das setas do campo magnético
+        function updateFieldArrows() {
+            const conductorPos = getCenter(conductor);
+            
+            fieldArrows.forEach(arrow => {
+                const arrowRect = arrow.getBoundingClientRect();
+                const arrowCenter = {
+                    x: (arrowRect.left - containerRect.left) + arrowRect.width / 2,
+                    y: (arrowRect.top - containerRect.top) + arrowRect.height / 2
+                };
+                
+                // Calcular campo magnético na posição da seta
+                const field = calculateMagneticField(arrowCenter, conductorPos);
+                
+                // Calcular ângulo do campo
+                let angleRad = Math.atan2(field.y, field.x);
+                let angleDeg = angleRad * (180 / Math.PI);
+                
+                // Aplicar rotação à seta
+                arrow.style.transform = `rotate(${angleDeg}deg)`;
+                
+                // Ajustar opacidade baseado na intensidade do campo
+                const intensity = Math.sqrt(field.x**2 + field.y**2);
+                const maxIntensity = 0.0005;
+                const opacity = Math.min(0.4, Math.max(0.3, intensity / maxIntensity));
+                arrow.style.opacity = opacity;
+            });
+        }
+
+        /**
+         * Calcula o centro de um elemento em relação ao container da simulação.
+         */
+        function getCenter(el) {
+            const elRect = el.getBoundingClientRect();
+            return {
+                x: (elRect.left - containerRect.left) + elRect.width / 2,
+                y: (elRect.top - containerRect.top) + elRect.height / 2
+            };
+        }
+        
+        /**
+         * Calcula o vetor do campo magnético em um ponto específico
+         */
+        function calculateMagneticField(point, conductorPos) {
+            // Vetor do ponto ao condutor
+            const dx = point.x - conductorPos.x;
+            const dy = point.y - conductorPos.y;
+            
+            // Distância do ponto ao condutor
+            const r = Math.sqrt(dx**2 + dy**2);
+            
+            // Evitar divisão por zero e distâncias muito pequenas
+            if (r < 50) {
+                return { x: 0, y: 0 };
+            }
+            
+            // Constante μ₀/(4π) - aproximadamente 1e-7 N/A²
+            const mu0_over_4pi = 1e-7;
+            
+            // Intensidade do campo magnético (módulo)
+            // B = (μ₀ * I) / (2π * r)
+            const B_magnitude = (2 * mu0_over_4pi * Math.abs(current)) / r;
+            
+            // Direção do campo magnético:
+            // Para corrente positiva (para cima), o campo gira no sentido anti-horário
+            // Para corrente negativa (para baixo), o campo gira no sentido horário
+            const direction = current > 0 ? 1 : -1;
+            
+            // Componentes do campo magnético
+            // B = (μ₀ * I) / (2π * r²) * (-dy, dx) para corrente positiva
+            const B_x = -direction * B_magnitude * dy / r;
+            const B_y = direction * B_magnitude * dx / r;
+            
+            return {
+                x: B_x * 100000,
+                y: B_y * 100000
+            };
+        }
+
+        /**
+         * Atualiza a rotação da agulha da bússola com base no campo magnético.
+         */
+        function updateCompass() {
+            const compassCenter = getCenter(compass);
+            const conductorPos = getCenter(conductor);
+
+            // Calcular campo magnético na posição da bússola
+            const field = calculateMagneticField(compassCenter, conductorPos);
+
+            // Calcula o ângulo do vetor do campo total
+            let angleRad = Math.atan2(field.y, field.x);
+            let angleDeg = angleRad * (180 / Math.PI);
+
+            // Offset para alinhar com o design da agulha
+            angleDeg += 90; 
+
+            // Aplica a rotação à agulha
+            needle.style.transform = `rotate(${angleDeg}deg)`;
+            
+            // Atualiza as setas do campo magnético
+            updateFieldArrows();
+        }
+
+        // --- Lógica de Arrastar e Soltar (Drag and Drop) ---
+
+        compass.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            compass.style.cursor = 'grabbing';
+            compass.style.zIndex = 1000;
+            
+            containerRect = container.getBoundingClientRect();
+            
+            offsetX = e.clientX - containerRect.left - compass.offsetLeft;
+            offsetY = e.clientY - containerRect.top - compass.offsetTop;
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+            
+            e.preventDefault();
+        });
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+
+            let newLeft = e.clientX - containerRect.left - offsetX;
+            let newTop = e.clientY - containerRect.top - offsetY;
+
+            newLeft = Math.max(0, Math.min(newLeft, containerRect.width - compass.offsetWidth));
+            newTop = Math.max(0, Math.min(newTop, containerRect.height - compass.offsetHeight));
+
+            compass.style.left = `${newLeft}px`;
+            compass.style.top = `${newTop}px`;
+
+            updateCompass();
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+            compass.style.cursor = 'grab';
+            compass.style.zIndex = 20;
+            
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        }
+
+        // Atualiza a posição da bússola caso a janela mude de tamanho
+        window.addEventListener('resize', () => {
+            containerRect = container.getBoundingClientRect();
+            createFieldArrows();
+            updateCompass();
+        });
+
+        // Controles da simulação
+        document.getElementById('reset-btn').addEventListener('click', function() {
+            // Resetar corrente
+            current = 50;
+            currentSlider.value = 50;
+            updateCurrentDisplay();
+            
+            // Resetar posição da bússola
+            compass.style.left = '50%';
+            compass.style.top = '75%';
+            updateCompass();
+        });
+
+        // Inicializar a simulação
+        updateCurrentDisplay();
+        createFieldArrows();
+        updateCompass();
+    });
+
+    // Controles do avatar
+    const mouth = document.getElementById('mouth');
+    const arm = document.getElementById('arm-right');
+    const btnSpeak = document.getElementById('speak');
+    const btnStop = document.getElementById('stop');
+    const btnWave = document.getElementById('wave');
+    const textarea = document.getElementById('text');
+    const minimizeBtn = document.getElementById('minimize-avatar');
+    
+    let synth = window.speechSynthesis;
+    let utterance = null;
+    
+    function startMouth() { mouth.classList.add('talking'); }
+    function stopMouth() { mouth.classList.remove('talking'); }
+    function startWave() { arm.classList.add('waving'); }
+    function stopWave() { arm.classList.remove('waving'); }
+    
+    btnSpeak.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) {
+        alert('Navegador não suporta Web Speech API');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      utterance = new SpeechSynthesisUtterance(textarea.value);
+      utterance.onstart = () => { startMouth(); startWave(); };
+      utterance.onend = () => { stopMouth(); stopWave(); };
+      synth.speak(utterance);
+    });
+    
+    btnStop.addEventListener('click', () => {
+      synth.cancel();
+      stopMouth();
+      stopWave();
+    });
+    
+    btnWave.addEventListener('click', () => {
+      startWave();
+      setTimeout(() => stopWave(), 1500);
+    });
+    
+    minimizeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        const avatarControls = document.querySelector('.avatar-controls');
+        const avatarStage = document.querySelector('.avatar-stage');
+        
+        if (avatarControls.style.display !== 'none') {
+            avatarControls.style.display = 'none';
+            avatarStage.style.display = 'none';
+            minimizeBtn.textContent = '+';
+        } else {
+            avatarControls.style.display = 'block';
+            avatarStage.style.display = 'flex';
+            minimizeBtn.textContent = '−';
+        }
+    });
+    
+    // Controles das abas
+    const tabs = document.querySelectorAll('.info-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and contents
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
