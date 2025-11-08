@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eletromagnetismo e Leis de Maxwell</title>
+
+    <style>
+        /* --- Configuração Geral (Fundo e Fonte) --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0; 
+            background-color: #f0f2f5; 
+            color: #333;
+            line-height: 1.7;
+        }
+
+        /* --- O Container Principal (A parte branca centralizada) --- */
+        .content-container {
+            max-width: 900px;
+            margin: 30px auto; /* Centraliza o container na tela (auto nas laterais) */
+            padding: 20px 40px; 
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- Estilos do Cabeçalho e Títulos --- */
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        header h1 {
+            font-size: 2.8em;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #555;
+            margin-top: 10px;
+        }
+
+        /* Títulos de cada seção (H2) */
+        .simulation-entry h2 {
+            font-size: 2em;
+            color: #2c3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        /* --- Estilo das Seções de Simulação (Imagem e Texto) --- */
+        .simulation-entry {
+            margin-bottom: 40px;
+        }
+
+        .simulation-entry img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            border: 1px solid #eee;
+            margin-top: 15px;
+            background-color: #fafafa;
+        }
+
+        .simulation-entry p {
+            font-size: 1.1em;
+            color: #222;
+            text-align: justify;
+        }
+
+        /* --- Estilo para Equações (Novo) --- */
+        .equation {
+            text-align: center; /* Centraliza a equação */
+            font-size: 1.2em;   /* Aumenta um pouco o tamanho */
+            margin: 25px 0;     /* Adiciona espaço vertical */
+            overflow-x: auto;   /* Adiciona rolagem horizontal se for muito larga */
+            padding: 10px 0;
+        }
+
+        /* --- Estilo do Rodapé --- */
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+            color: #888;
+        }
+        
+        /* --- Estilos do Assistente Virtual --- */
+
+        .assistant-container {
+            position: fixed; /* Fica fixo na tela */
+            top: 50%; /* Centraliza verticalmente */
+            right: 0; /* Começa colado à direita */
+            transform: translateY(-50%);
+            width: 300px;
+            height: auto;
+            max-height: 80vh;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-right: none;
+            border-radius: 10px 0 0 10px;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            transition: right 0.4s ease-in-out;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilo "Minimizado" */
+        .assistant-container.minimized {
+            right: -300px; /* Esconde o container, deixando só o botão */
+        }
+
+        /* Botão de Minimizar/Maximizar */
+        .assistant-toggle {
+            position: absolute;
+            left: -40px; /* Fica para fora do container */
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 60px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 10px 0 0 10px;
+            cursor: pointer;
+            font-size: 1.5em;
+            line-height: 60px;
+            text-align: center;
+        }
+
+        /* Cabeçalho do Assistente */
+        .assistant-header {
+            padding: 15px;
+            background-color: #2c3e50;
+            color: white;
+            border-radius: 8px 0 0 0;
+            text-align: center;
+            display: flex; /* Para alinhar a imagem e o texto */
+            align-items: center; /* Centraliza verticalmente os itens */
+            gap: 10px; /* Espaço entre a imagem e o texto */
+        }
+        .assistant-header img {
+            width: 50px; /* Tamanho da imagem do professor */
+            height: 50px;
+            border-radius: 50%; /* Deixa a imagem redonda */
+            border: 2px solid white;
+            object-fit: cover; /* Garante que a imagem preencha o espaço */
+        }
+        .assistant-header div { /* Wrapper para o texto do cabeçalho */
+            flex-grow: 1; /* Permite que o texto ocupe o espaço restante */
+        }
+        .assistant-header h3 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+        .assistant-header p {
+            margin: 5px 0 0;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        /* Corpo do Chat */
+        .assistant-body {
+            flex-grow: 1;
+            overflow-y: auto; /* Permite rolagem se o conteúdo for grande */
+            padding: 15px;
+        }
+
+        /* Tópicos para seleção */
+        .assistant-topics {
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* Espaço entre os botões */
+            margin-bottom: 15px;
+        }
+
+        .assistant-topics button {
+            background-color: #f0f2f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.95em;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .assistant-topics button:hover {
+            background-color: #e0e4e8;
+        }
+
+        /* Caixa de mensagem do assistente */
+        #assistant-message-box {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #e9f5ff;
+            border: 1px solid #b8d4fe;
+            border-radius: 8px;
+            font-size: 0.95em;
+            line-height: 1.5;
+            min-height: 50px;
+            color: #333;
+        }
+
+        /* --- Ajuste para Telas Pequenas (Celulares) --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 0; /* Remove o padding em telas pequenas */
+            }
+
+            .content-container {
+                margin: 10px auto;
+                padding: 15px 20px;
+                width: 90%;
+            }
+
+            header h1 {
+                font-size: 2.0em;
+            }
+
+            .simulation-entry h2 {
+                font-size: 1.6em;
+            }
+
+            /* Em celulares, o assistente fica na parte inferior */
+            .assistant-container {
+                width: 100%;
+                max-height: 40vh;
+                top: auto;
+                bottom: 0;
+                right: 0;
+                transform: translateY(0);
+                border-radius: 10px 10px 0 0;
+                border: 1px solid #ddd;
+                border-bottom: none;
+            }
+            .assistant-container.minimized {
+                right: 0;
+                bottom: -38vh; /* Esconde quase tudo, deixando só o topo */
+            }
+            .assistant-toggle {
+                /* O botão vira o próprio cabeçalho */
+                position: static;
+                width: 100%;
+                height: auto;
+                border-radius: 0;
+                left: 0;
+                transform: none;
+                padding: 10px;
+                font-size: 1.2em;
+                display: flex; /* Para alinhar o ícone e o texto no celular */
+                justify-content: center; /* Centraliza horizontalmente */
+                align-items: center; /* Centraliza verticalmente */
+                gap: 10px; /* Espaço entre o ícone e o texto */
+            }
+            .assistant-toggle::before { /* Adiciona o ícone do professor no botão de toggle */
+                content: '';
+                display: inline-block;
+                width: 30px;
+                height: 30px;
+                background-image: url('imgs/professor.png'); /* Imagem padrão do professor */
+                background-size: cover;
+                border-radius: 50%;
+                border: 1px solid white;
+            }
+            .assistant-toggle.minimized::before {
+                background-image: url('imgs/professor.png'); /* Mantém a imagem padrão quando minimizado */
+            }
+            .assistant-toggle.speaking::before {
+                background-image: url('imgs/professor_falando.png'); /* Imagem do professor falando */
+            }
+
+            .assistant-header {
+                display: none; /* Esconde o cabeçalho original em mobile quando o toggle assume a função */
+            }
+        }
+    </style>
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+    <main class="content-container">
+        
+        <header>
+            <h1>Eletromagnetismo e as Leis de Maxwell</h1>
+            <p>Uma análise visual através de simulações</p>
+        </header>
+
+        <div class="simulation-entry">
+            <h2>0. Aplicação Prática: Antenas</h2>
+            <p>
+                As antenas são dispositivos projetados para transmitir ou receber ondas
+                eletromagnéticas, baseando-se diretamente nos princípios de campos
+                elétricos e magnéticos variáveis.
+            </p>
+            <img src="imgs/antena.gif" alt="Simulação de Antena">
+            <p>
+                Esta é uma simulação de uma antena parabólica irradiando ondas. O sinal é gerado no "feed horn" (ponto focal) e refletido pelo prato, que o concentra em um feixe estreito direcionado à antena receptora. A transmissão se baseia em correntes elétricas oscilantes que geram campos elétricos e magnéticos variáveis, os quais se propagam como ondas.
+            </p>
+            <img src="imgs/atenuação.png" alt="Simulação de Atenuação">
+            <p>
+                Nesta imagem, vemos a atenuação, um fenômeno fundamental. À medida que a onda se propaga pelo espaço, sua energia se espalha por uma área cada vez maior. Com isso, a intensidade do sinal (potência por área) diminui com o quadrado da distância (raio). É por isso que sinais de torres distantes chegam tão fracos.
+            </p>
+            <p>O ruído em uma transmissão entre antenas não vem diretamente das Leis de Maxwell, mas pode ser explicado por elas.
+
+            As equações de Maxwell descrevem como os campos elétricos e magnéticos se propagam — de forma determinística, sem ruído.
+            Na prática, o ruído aparece por causa de flutuações térmicas, interferências externas e imperfeições dos circuitos, que atuam como fontes aleatórias dentro das equações.
+
+            Assim, o ruído não é criado pelas leis de Maxwell, mas se propaga através delas, do mesmo modo que o sinal útil. Uma forma de representar isso na Lei de Ampère-Maxwell é separando as fontes de corrente:
+            </p>
+
+            <div class="equation">
+                $$ \nabla \times \mathbf{H} = \mathbf{J}_{\text{determinística}} + \mathbf{J}_{\text{ruído}} + \frac{\partial \mathbf{D}}{\partial t} $$
+            </div>
+
+            <p>
+                Onde J_determinística é o sinal que queremos enviar, e J_ruído representa todas as 
+                fontes de corrente aleatórias e indesejadas (ruído térmico, interferência, etc.).
+            </p>
+
+            <img src="imgs/sinal100m.png" alt="Sinal com ruído a curta distância">
+            <p>
+                Aqui, vemos o sinal recebido a uma distância 'X'. Ele é claro e facilmente distinguível 
+                do ruído de fundo (as flutuações aleatórias menores). O ruído é uma interferência 
+                eletromagnética inevitável, gerada por fontes naturais e artificiais. A qualidade 
+                da recepção depende da Relação Sinal-Ruído (SNR): o sinal deve ser muito mais forte
+                 que o ruído para ser decodificado.
+            </p>
+            <img src="imgs/sinal1000m.png" alt="Sinal com ruído a longa distância">
+            <p>
+                Quando a distância aumenta significativamente (ex: '10X'), o sinal fica muito mais 
+                fraco devido à atenuação. O nível de ruído, no entanto, permanece o mesmo. Como resultado,
+                o sinal (pico) mal se destaca do ruído. A Relação Sinal-Ruído (SNR) fica muito baixa, 
+                tornando a comunicação difícil ou impossível.
+            </p>
+        </div>
+
+        <div class="simulation-entry">
+            <h2>1. Lei de Gauss para Eletricidade</h2>
+            <p>
+                A primeira lei de Maxwell descreve como cargas elétricas criam campos elétricos.
+                O fluxo do campo elétrico através de uma superfície fechada é proporcional à
+                carga elétrica total contida nessa superfície.
+            </p>
+            <img src="imgs/gauss_eletricidade.png" alt="Simulação da Lei de Gauss">
+            <p>
+                Nesta simulação, vemos as linhas de campo elétrico (setas) emanando de uma 
+                carga positiva (fonte). A Lei de Gauss nos diz que o número total de linhas 
+                que atravessam uma superfície imaginária (como a esfera pontilhada) é diretamente 
+                proporcional à quantidade de carga (+q) dentro dela. Se a carga fosse negativa, 
+                as linhas apontariam para dentro.
+            </p>
+            <div class="equation">
+                $$ \nabla \cdot \mathbf{E} = \frac{\rho}{\varepsilon_0} $$
+            </div>
+            <p>
+                Esta fórmula diz que o fluxo do campo elétrico (<strong>𝐄</strong>) saindo de um volume
+                é proporcional à densidade de carga elétrica <strong>ρ</strong> dentro dele.
+                Em outras palavras, cargas positivas “emanam” linhas de campo e cargas negativas as “absorvem”.
+            </p>
+            <p>
+                Esse mesmo princípio é aplicado nas antenas transmissoras. Quando a corrente alternada oscila dentro do condutor,
+                ela faz as cargas se acumularem e se redistribuírem periodicamente nas extremidades da antena. Cada variação de
+                carga cria e retira linhas de campo elétrico, como prevê a Lei de Gauss. É essa alternância contínua de campos
+                elétricos e magnéticos que dá origem às ondas eletromagnéticas que se propagam pelo espaço.
+            </p>
+        </div>
+
+        <div class="simulation-entry">
+            <h2>2. Lei de Gauss para Magnetismo</h2>
+            <p>
+                Esta lei afirma que não existem "monopolos magnéticos" (cargas magnéticas isoladas,
+                como um "norte" sem um "sul"). O fluxo magnético total através de qualquer
+                superfície fechada é sempre zero.
+            </p>
+            <img src="imgs/magnetico.png" alt="Simulação de linhas de campo magnético">
+            <p>
+                A simulação ilustra um ímã permanente (ou uma antena, que também gera o campo). 
+                Observe como as linhas de campo magnético sempre formam loops fechados: elas 
+                saem do polo norte e entram no polo sul, continuando *por dentro* do material. 
+                Qualquer superfície fechada que você desenhar terá o mesmo número de linhas 
+                "entrando" e "saindo", resultando em um fluxo líquido zero.
+            </p>
+            <div class="equation">
+                $$ \nabla \cdot \mathbf{B} = 0 $$
+            </div>
+            <p>
+                O campo magnético (<strong>𝐁</strong>) nunca tem começo nem fim — suas linhas
+                são sempre fechadas. Isso significa que não existem monopolos magnéticos isolados.
+            </p>
+
+        </div>
+
+        <div class="simulation-entry">
+            <h2>3. Lei de Faraday da Indução</h2>
+            <p>
+                A terceira lei é fundamental para a geração de eletricidade. Ela descreve como um
+                campo magnético variável no tempo (ou um movimento através dele) pode
+                "induzir" uma corrente elétrica em um circuito.
+            </p>
+            <img src="imgs/lampada.gif" alt="Simulação da Lei de Faraday">
+            <p>
+                Observe que a lâmpada neon acende *sem* estar fisicamente conectada à antena. 
+                A antena transmissora cria uma onda eletromagnética (um campo magnético e 
+                elétrico variável). Quando essa onda atravessa o circuito da lâmpada, o 
+                campo magnético variável induz uma voltagem (uma "força eletromotriz") no 
+                fio, forçando os elétrons a se moverem e acendendo a lâmpada. É o princípio da indução!
+            </p>
+            <div class="equation">
+                $$ \nabla \times \mathbf{E} = -\frac{\partial \mathbf{B}}{\partial t} $$
+            </div>
+            <p>
+                Um campo magnético (<strong>𝐁</strong>) que varia no tempo gera um campo elétrico 
+                rotacional (<strong>𝐄</strong>). É o princípio da indução: quando o fluxo magnético
+                muda, surge uma tensão (força eletromotriz) em um circuito.
+            </p>
+        </div>
+
+        <div class="simulation-entry">
+            <h2>4. Lei de Ampère-Maxwell</h2>
+            <p>
+                Esta lei unifica eletricidade e magnetismo. Ela afirma que campos magnéticos
+                são gerados por duas fontes: correntes elétricas (Lei de Ampère) e campos
+                elétricos variáveis no tempo (a correção genial de Maxwell).
+            </p>
+            <img src="imgs/antena.gif" alt="Simulação da Lei de Ampère-Maxwell">
+            <p>
+                A simulação da antena é um exemplo perfeito. A corrente elétrica que oscila 
+                no metal da antena (um fio) cria um campo magnético ao seu redor (Lei de Ampère). 
+                Ao mesmo tempo, essa oscilação acumula e retira cargas das pontas, criando um 
+                campo elétrico que varia rapidamente no tempo. A genialidade de Maxwell foi 
+                perceber que *ambas* as fontes geram o campo magnético. É essa interdependência 
+                que permite à onda "se soltar" e viajar.
+            </p>
+            <div class="equation">
+                $$ \nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_0 \varepsilon_0 \frac{\partial \mathbf{E}}{\partial t} $$
+            </div>
+            <p>
+                Um campo magnético (<strong>𝐁</strong>) pode ser gerado por correntes elétricas
+                (<strong>𝐉</strong>) ou por campos elétricos que variam no tempo.
+                O segundo termo, adicionado por Maxwell, explica como ondas eletromagnéticas
+                podem se propagar mesmo no vácuo.
+            </p>
+        </div>
+
+        <div class="simulation-entry">
+            <h2>5. A Síntese: Ondas Eletromagnéticas</h2>
+            <p>
+                A consequência mais profunda das equações de Maxwell é a previsão da
+                existência de ondas eletromagnéticas (como a luz) que se propagam
+                no vácuo na velocidade da luz.
+            </p>
+            <img src="imgs/onda_eletromagnetica_3d.gif" alt="Simulação de Onda Eletromagnética">
+            <p>
+                Este GIF mostra o campo elétrico (E) e o campo magnético (B) oscilando. 
+                Eles são perpendiculares entre si e ambos são perpendiculares à direção 
+                de propagação. Um campo E variável gera um campo B, que por sua vez 
+                gera um campo E.
+            </p>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>© 2025 - Pedro Sandrini</p>
+    </footer>
+
+    <aside class="assistant-container" id="assistant">
+        
+        <button class="assistant-toggle" id="assistant-toggle-btn" aria-label="Alternar assistente">
+            «
+        </button>
+        
+        <div class="assistant-header">
+            <img src="imgs/professor.png" alt="Professor Maxwell">
+            <div>
+                <h3>Professor Maxwell</h3>
+                <p>Seu tutor de Eletromagnetismo</p>
+            </div>
+        </div>
+
+        <div class="assistant-body">
+            
+            <p style="text-align: center; margin-top: 0;">Olá! Selecione um tópico para um resumo em áudio:</p>
+
+            <div class="assistant-topics">
+                <button data-topic="antenas">0. Aplicação: Antenas</button>
+                <button data-topic="gauss-eletro">1. Lei de Gauss (Eletricidade)</button>
+                <button data-topic="gauss-mag">2. Lei de Gauss (Magnetismo)</button>
+                <button data-topic="faraday">3. Lei de Faraday</button>
+                <button data-topic="ampere">4. Lei de Ampère-Maxwell</button>
+                <button data-topic="ondas">5. Ondas Eletromagnéticas</button>
+            </div>
+
+            <div id="assistant-message-box">
+                Aguardando sua seleção...
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. Elementos do DOM ---
+            const assistant = document.getElementById('assistant');
+            const toggleBtn = document.getElementById('assistant-toggle-btn');
+            const messageBox = document.getElementById('assistant-message-box');
+            const topicButtons = document.querySelectorAll('.assistant-topics button');
+            const professorImg = document.querySelector('.assistant-header img'); // Seleciona a imagem do professor
+            const mobileToggleIcon = document.querySelector('.assistant-toggle::before');
+
+            // Verifica se a API de Fala é suportada
+            const synth = window.speechSynthesis;
+            if (!synth) {
+                messageBox.textContent = "Seu navegador não suporta a API de fala. Os resumos em texto ainda funcionarão.";
+            }
+
+            // --- 2. Textos de Resumo para cada Tópico ---
+            const topicSummaries = {
+                'gauss-eletro': "A Lei de Gauss para eletricidade diz que cargas elétricas criam campos elétricos. O fluxo elétrico total através de uma superfície fechada é proporcional à carga líquida dentro dela. Cargas positivas são fontes de campo, e cargas negativas são sumidouros.",
+                'gauss-mag': "A Lei de Gauss para o magnetismo é simples: o fluxo magnético total através de qualquer superfície fechada é sempre zero. Isso significa que não existem monopolos magnéticos, ou seja, você nunca encontrará um polo norte ou sul isolado. Linhas de campo magnético sempre formam loops fechados.",
+                'faraday': "A Lei de Faraday é a base dos geradores. Ela afirma que um campo magnético variando no tempo induz um campo elétrico circulante, que por sua vez pode criar uma corrente elétrica em um fio. É assim que a energia é transferida sem fios, como no GIF da lâmpada.",
+                'ampere': "A Lei de Ampère-Maxwell unifica tudo. Ela diz que um campo magnético pode ser criado de duas maneiras: por correntes elétricas comuns, como em um fio, ou por um campo elétrico que varia no tempo. Essa segunda parte, a 'corrente de deslocamento' de Maxwell, é o que permite que as ondas eletromagnéticas existam.",
+                'ondas': "As ondas eletromagnéticas são a grande síntese das leis. Elas são campos elétricos e magnéticos oscilantes que se autossustentam e viajam pelo vácuo na velocidade da luz. Um campo elétrico variável cria um magnético, que cria um elétrico, e assim por diante. Luz, rádio, Wi-Fi e raios-X são todos tipos de ondas eletromagnéticas.",
+                'antenas': "Antenas são aplicações práticas das leis. Para transmitir, uma corrente oscilante gera ondas eletromagnéticas. Para receber, a onda que chega induz uma corrente na antena. A qualidade do sinal depende da atenuação, que é o enfraquecimento do sinal com a distância, e da Relação Sinal-Ruído, que compara a força do sinal com o ruído de fundo."
+            };
+
+            // --- 3. Função para Falar (Text-to-Speech) ---
+            function speak(text) {
+                if (!synth) return; // Não faz nada se a API não for suportada
+
+                // Cancela qualquer fala anterior
+                synth.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'pt-BR'; // Define o idioma para Português do Brasil
+                utterance.rate = 1.0; // Velocidade da fala
+                utterance.pitch = 1.0; // Tom da fala
+
+                // Eventos para mudar a imagem do professor
+                utterance.onstart = () => {
+                    if (professorImg) professorImg.src = 'imgs/professor_falando.png';
+                    // Para mobile, adiciona classe para mudar o background-image
+                    if (window.innerWidth <= 768) {
+                        toggleBtn.classList.add('speaking');
+                    }
+                };
+                utterance.onend = () => {
+                    if (professorImg) professorImg.src = 'imgs/professor.png';
+                    // Para mobile, remove a classe
+                    if (window.innerWidth <= 768) {
+                        toggleBtn.classList.remove('speaking');
+                    }
+                };
+                utterance.onerror = (event) => {
+                    console.error('SpeechSynthesisUtterance.onerror', event);
+                    if (professorImg) professorImg.src = 'imgs/professor.png'; // Volta à imagem normal em caso de erro
+                    if (window.innerWidth <= 768) {
+                        toggleBtn.classList.remove('speaking');
+                    }
+                };
+
+                // Inicia a fala
+                synth.speak(utterance);
+            }
+
+            // --- 4. Função para Lidar com o Clique no Tópico ---
+            function handleTopicClick(event) {
+                const topicKey = event.target.dataset.topic;
+                const summaryText = topicSummaries[topicKey];
+
+                if (summaryText) {
+                    // Atualiza a caixa de mensagem
+                    messageBox.textContent = summaryText;
+                    
+                    // Fala o texto
+                    speak(summaryText);
+                }
+            }
+
+            // --- 5. Função para Alternar o Assistente (Minimizar/Maximizar) ---
+            function toggleAssistant() {
+                assistant.classList.toggle('minimized');
+                
+                // Muda o ícone do botão
+                if (assistant.classList.contains('minimized')) {
+                    toggleBtn.textContent = '»';
+                    toggleBtn.setAttribute('aria-label', 'Maximizar assistente');
+                    synth.cancel(); // Para a fala se o painel for fechado
+                    if (professorImg) professorImg.src = 'imgs/professor.png'; // Volta à imagem normal
+                    if (window.innerWidth <= 768) {
+                        toggleBtn.classList.remove('speaking'); // Garante que a imagem de falando não fique presa
+                    }
+                } else {
+                    toggleBtn.textContent = '«';
+                    toggleBtn.setAttribute('aria-label', 'Minimizar assistente');
+                }
+            }
+
+            // --- 6. Adiciona os Event Listeners ---
+            toggleBtn.addEventListener('click', toggleAssistant);
+            topicButtons.forEach(button => {
+                button.addEventListener('click', handleTopicClick);
+            });
+
+            // Para garantir que a imagem inicial do professor seja exibida
+            if (professorImg) professorImg.src = 'imgs/professor.png';
+
+        });
+    </script>
+
+</body>
+</html>
